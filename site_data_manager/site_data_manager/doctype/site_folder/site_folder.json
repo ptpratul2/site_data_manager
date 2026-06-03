@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-01 12:37:42.571920",
+ "doctype": "DocType",
+ "document_type": "Setup",
+ "engine": "InnoDB",
+ "field_order": [
+  "folder_name",
+  "parent_site_folder",
+  "is_group",
+  "lft",
+  "rgt",
+  "old_parent"
+ ],
+ "fields": [
+  {
+   "fieldname": "folder_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Folder Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "parent_site_folder",
+   "fieldtype": "Link",
+   "ignore_user_permissions": 1,
+   "in_list_view": 1,
+   "label": "Parent Site Folder",
+   "options": "Site Folder"
+  },
+  {
+   "default": "0",
+   "description": "Allow sub-folders under this folder (required for parent folders in the tree).",
+   "fieldname": "is_group",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Group"
+  },
+  {
+   "fieldname": "lft",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "lft",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "rgt",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "rgt",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "old_parent",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "ignore_user_permissions": 1,
+   "label": "Old Parent",
+   "no_copy": 1,
+   "options": "Site Folder",
+   "print_hide": 1
+  }
+ ],
+ "icon": "fa fa-folder-open",
+ "index_web_pages_for_search": 1,
+ "is_tree": 1,
+ "links": [],
+ "modified": "2026-06-03 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Site Data Manager",
+ "name": "Site Folder",
+ "nsm_parent_field": "parent_site_folder",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Insights Admin",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Insights User",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "All",
+   "permlevel": 0
+  }
+ ],
+ "search_fields": "folder_name,parent_site_folder",
+ "show_name_in_global_search": 1,
+ "sort_field": "lft",
+ "title_field": "folder_name",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

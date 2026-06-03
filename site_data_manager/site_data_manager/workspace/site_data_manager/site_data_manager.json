@@ -1,0 +1,78 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"sdm_hdr\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Site Data Manager</b></span><br><span class=\\\"text-muted\\\">Folder tree for Insights uploads is here — not in the Insights app list.</span>\",\"col\":12}},{\"id\":\"sdm_sp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sdm_manage\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Manage Insights Uploads\",\"col\":4}},{\"id\":\"sdm_upload\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Upload Insights File\",\"col\":4}},{\"id\":\"sdm_folders\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Site Folder\",\"col\":4}}]",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "folder-open",
+ "indicator_color": "",
+ "is_hidden": 0,
+ "label": "Site Data Manager",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Manage Insights Uploads",
+   "link_count": 0,
+   "link_to": "manage-insights-uploads",
+   "link_type": "Page",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Upload Insights File",
+   "link_count": 0,
+   "link_to": "upload-insights-file",
+   "link_type": "Page",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Site Folder",
+   "link_count": 0,
+   "link_to": "Site Folder",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "module": "Site Data Manager",
+ "name": "Site Data Manager",
+ "number_cards": [],
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 10,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Manage Insights Uploads",
+   "link_to": "manage-insights-uploads",
+   "type": "Page"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Upload Insights File",
+   "link_to": "upload-insights-file",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "Tree",
+   "label": "Site Folder",
+   "link_to": "Site Folder",
+   "type": "DocType"
+  }
+ ],
+ "title": "Site Data Manager"
+}

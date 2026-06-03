@@ -1,0 +1,12 @@
+[
+ {
+  "doctype": "Custom Field",
+  "dt": "Insights Table v3",
+  "fieldname": "custom_site_folder",
+  "fieldtype": "Link",
+  "insert_after": "label",
+  "label": "Site Folder",
+  "name": "Insights Table v3-custom_site_folder",
+  "options": "Site Folder"
+ }
+]

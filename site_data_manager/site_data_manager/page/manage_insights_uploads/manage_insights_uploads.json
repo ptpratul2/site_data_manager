@@ -1,0 +1,26 @@
+{
+ "creation": "2026-06-03 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-06-03 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Site Data Manager",
+ "name": "manage-insights-uploads",
+ "owner": "Administrator",
+ "page_name": "manage-insights-uploads",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Insights Admin"
+  },
+  {
+   "role": "Insights User"
+  }
+ ],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Manage Insights Uploads"
+}
