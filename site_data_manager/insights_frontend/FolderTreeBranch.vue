@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, FileText, Folder, Trash2 } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, FileText, Folder, RefreshCcw, Sheet, Trash2 } from 'lucide-vue-next'
 import { computed, inject } from 'vue'
 import { __ } from '../translation'
 
@@ -23,6 +23,8 @@ const ctx = inject('uploadsTreeCtx') as {
 	confirmDeleteTable: (table: any) => void
 	canDeleteUploads: { value: boolean }
 	deletingTable: { value: string | null }
+	syncGoogleSheetTable: (table: any) => void
+	syncingTable: { value: string | null }
 }
 
 const depth = computed(() => props.depth ?? 0)
@@ -68,7 +70,26 @@ const show = computed(
 				>
 					<FileText class="h-4 w-4 shrink-0 text-gray-400" />
 					<span class="truncate font-mono text-sm text-gray-700">{{ table.table_name }}</span>
+					<span
+						v-if="table.google_sheet_sync"
+						class="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700"
+						:title="table.google_sheet_sync.last_synced_on ? __('Last synced: {0}', table.google_sheet_sync.last_synced_on) : __('Google Sheet sync')"
+					>
+						<Sheet class="h-3 w-3" />
+						{{ __('Sheet') }}
+					</span>
 				</div>
+				<Button
+					v-if="table.google_sheet_sync"
+					variant="ghost"
+					:label="__('Sync Now')"
+					:loading="ctx.syncingTable.value === table.table_name"
+					@click.stop="ctx.syncGoogleSheetTable(table)"
+				>
+					<template #prefix>
+						<RefreshCcw class="h-4 w-4 text-gray-500 group-hover:text-blue-600" />
+					</template>
+				</Button>
 				<Button
 					v-if="ctx.canDeleteUploads.value"
 					variant="ghost"

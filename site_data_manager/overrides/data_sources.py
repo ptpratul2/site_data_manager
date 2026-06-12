@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from insights.decorators import insights_whitelist, validate_type
 
+from site_data_manager.api.google_sheets import get_google_sheet_sync_map
 from site_data_manager.permissions import (
 	filter_upload_tables_by_folder,
 	has_site_folder_access,
@@ -26,7 +27,10 @@ def _check_uploads_table_folder_access(data_source: str, table_name: str):
 
 @insights_whitelist()
 @validate_type
-def get_data_source_tables(data_source: str | None = None, search_term: str | None = None, limit: int = 100):
+def get_data_source_tables(
+	data_source: str | None = None, search_term: str | None = None, limit: int | str = 100
+):
+	limit = frappe.utils.cint(limit) or 100
 	tables = frappe.get_list(
 		"Insights Table v3",
 		filters={"data_source": data_source or ["is", "set"]},
@@ -40,6 +44,10 @@ def get_data_source_tables(data_source: str | None = None, search_term: str | No
 
 	if data_source == "uploads":
 		tables = filter_upload_tables_by_folder(tables)
+
+	sync_map = {}
+	if data_source == "uploads" and tables:
+		sync_map = get_google_sheet_sync_map([t.table for t in tables])
 
 	# Batch-fetch all folder names in one query (avoids N+1 per-table DB calls)
 	folder_docs = {t.custom_site_folder for t in tables if t.custom_site_folder}
@@ -61,6 +69,7 @@ def get_data_source_tables(data_source: str | None = None, search_term: str | No
 			last_synced_on=table.last_synced_on,
 			custom_site_folder=folder_name_map.get(table.custom_site_folder, table.custom_site_folder),
 			custom_site_folder_doc=table.custom_site_folder,
+			google_sheet_sync=sync_map.get(table.table),
 		)
 		for table in tables
 	]

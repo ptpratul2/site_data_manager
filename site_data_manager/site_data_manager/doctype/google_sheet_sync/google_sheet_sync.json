@@ -1,0 +1,128 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:table_name",
+ "creation": "2026-06-12 20:30:00.000000",
+ "doctype": "DocType",
+ "document_type": "Setup",
+ "engine": "InnoDB",
+ "field_order": [
+  "sheet_url",
+  "table_name",
+  "site_folder",
+  "column_break_1",
+  "enabled",
+  "sync_interval_minutes",
+  "section_break_status",
+  "last_synced_on",
+  "last_sync_status",
+  "last_sync_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "sheet_url",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Google Sheet URL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "table_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Insights Table Name",
+   "read_only": 1,
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "site_folder",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Site Folder",
+   "options": "Site Folder",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Auto Sync Enabled"
+  },
+  {
+   "default": "30",
+   "fieldname": "sync_interval_minutes",
+   "fieldtype": "Select",
+   "label": "Sync Interval (minutes)",
+   "options": "15\n30\n60\n120"
+  },
+  {
+   "fieldname": "section_break_status",
+   "fieldtype": "Section Break",
+   "label": "Sync Status"
+  },
+  {
+   "fieldname": "last_synced_on",
+   "fieldtype": "Datetime",
+   "label": "Last Synced On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_status",
+   "fieldtype": "Select",
+   "label": "Last Sync Status",
+   "options": "\nSuccess\nFailed\nPending",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_error",
+   "fieldtype": "Small Text",
+   "label": "Last Sync Error",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-06-12 20:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Site Data Manager",
+ "name": "Google Sheet Sync",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Insights Admin",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Insights User",
+   "write": 1
+  }
+ ],
+ "search_fields": "table_name,site_folder",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

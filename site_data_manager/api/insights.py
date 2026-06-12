@@ -4,9 +4,9 @@
 import frappe
 from frappe import _
 from insights.decorators import insights_whitelist, validate_type
-from insights.insights.doctype.insights_table_v3.insights_table_v3 import InsightsTablev3
 from insights.insights.doctype.insights_team.insights_team import check_data_source_permission
 
+from site_data_manager.api.upload_helpers import import_table_into_uploads, preview_uploaded_table
 from site_data_manager.permissions import (
 	can_delete_uploaded_tables,
 	expand_allowed_folders_for_tree,
@@ -128,40 +128,6 @@ def get_site_folders_for_insights():
 
 
 # ---------------------------------------------------------------------------
-# File reading
-# ---------------------------------------------------------------------------
-
-def _read_uploaded_table(db, file_path: str, ext: str):
-	"""Read an uploaded file into an Ibis table.
-
-	Excel files use all_varchar=True because DuckDB infers column types from the
-	first row only; mixed-type columns (numbers + text) cause InvalidInputException.
-	"""
-	try:
-		if ext == "xlsx":
-			return db.read_xlsx(file_path, all_varchar=True)
-		if ext in ("json", "jsonl"):
-			return db.read_json(file_path)
-		return db.read_csv(file_path)
-
-	except Exception as e:
-		frappe.log_error(title="site_data_manager: read upload file", message=frappe.get_traceback())
-
-		msgs = {
-			"xlsx": _(
-				"Failed to read Excel file. If the sheet mixes numbers and text in the same column, "
-				"save as CSV and try again. ({0})"
-			).format(str(e)[:200]),
-			"json": _("Failed to read JSON/JSONL file. Ensure the file is valid JSON or JSONL."),
-			"jsonl": _("Failed to read JSON/JSONL file. Ensure the file is valid JSON or JSONL."),
-		}
-		frappe.throw(
-			msgs.get(ext, _("Failed to read uploaded file. Please try again.")),
-			exc=frappe.ValidationError,
-		)
-
-
-# ---------------------------------------------------------------------------
 # Upload flow
 # ---------------------------------------------------------------------------
 
@@ -170,7 +136,6 @@ def _read_uploaded_table(db, file_path: str, ext: str):
 def get_file_data(filename: str):
 	"""Preview uploaded file before import."""
 	from insights.api import create_uploads_if_not_exists, get_csv_file
-	from insights.insights.doctype.insights_data_source_v3.ibis_utils import get_columns_from_schema
 
 	check_data_source_permission("uploads")
 
@@ -181,14 +146,12 @@ def get_file_data(filename: str):
 	ds = frappe.get_doc("Insights Data Source v3", "uploads")
 	with ds.write_connection() as db:
 		try:
-			table = _read_uploaded_table(db, file.get_full_path(), ext)
-			columns = get_columns_from_schema(table.schema())
-			rows = table.head(50).execute().fillna("").to_dict(orient="records")
+			preview = preview_uploaded_table(db, file.get_full_path(), ext)
 			return {
 				"tablename": file_name,
-				"columns": columns,
-				"rows": rows,
-				"total_rows": int(table.count().execute()),
+				"columns": preview["columns"],
+				"rows": preview["rows"],
+				"total_rows": preview["total_rows"],
 			}
 		except frappe.ValidationError:
 			raise
@@ -218,26 +181,13 @@ def import_csv_data(filename: str, tablename: str = "", site_folder: str = ""):
 	ds = frappe.get_doc("Insights Data Source v3", "uploads")
 	with ds.write_connection() as db:
 		try:
-			table = _read_uploaded_table(db, file.get_full_path(), ext)
-			db.create_table(table_name, table, overwrite=True)
+			preview = preview_uploaded_table(db, file.get_full_path(), ext)
+			import_table_into_uploads(table_name, preview["table"], site_folder, db=db)
 		except frappe.ValidationError:
 			raise
 		except Exception:
 			frappe.log_error(title="site_data_manager: import_csv_data", message=frappe.get_traceback())
 			frappe.throw(_("Failed to import file into Insights. Please try again."))
-
-	InsightsTablev3.bulk_create(ds.name, [table_name])
-
-	# Link table to Site Folder
-	table_doc = frappe.db.get_value(
-		"Insights Table v3",
-		{"data_source": ds.name, "table": table_name},
-		"name",
-	)
-	if table_doc:
-		frappe.db.set_value(
-			"Insights Table v3", table_doc, "custom_site_folder", site_folder, update_modified=False
-		)
 
 	frappe.db.commit()
 
@@ -275,6 +225,10 @@ def delete_uploaded_table(table_name: str):
 			db.drop_table(table_name, force=True)
 
 	frappe.delete_doc("Insights Table v3", table_doc_name)
+
+	if frappe.db.exists("Google Sheet Sync", table_name):
+		frappe.delete_doc("Google Sheet Sync", table_name, ignore_permissions=True)
+
 	frappe.db.commit()
 
 	return {"ok": True, "table_name": table_name}

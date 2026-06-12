@@ -8,6 +8,7 @@ import {
 	FileText,
 	Upload,
 	Trash2,
+	Sheet,
 } from 'lucide-vue-next'
 import { call } from 'frappe-ui'
 import { computed, h, onMounted, provide, ref, watch, watchEffect } from 'vue'
@@ -36,6 +37,7 @@ const dataSource = useDataSourceStore().getSource(props.name)
 const tableStore = useTableStore()
 const isUploadsDataSource = computed(() => props.name === 'uploads')
 const showUploadDialog = ref(false)
+const uploadDialogMode = ref<'file' | 'sheet'>('file')
 
 const searchQuery = ref('')
 const filteredTables = ref<DataSourceTable[]>([])
@@ -143,6 +145,38 @@ function goToTable(tableName: string) {
 	router.push(`/data-source/${props.name}/${encodeURIComponent(tableName)}`)
 }
 
+function openUploadDialog(mode: 'file' | 'sheet' = 'file') {
+	uploadDialogMode.value = mode
+	showUploadDialog.value = true
+}
+
+const syncingTable = ref<string | null>(null)
+
+function syncGoogleSheetTable(table: DataSourceTable) {
+	syncingTable.value = table.table_name
+	return call('site_data_manager.api.google_sheets.sync_google_sheet_now', {
+		table_name: table.table_name,
+	})
+		.then(() => {
+			createToast({
+				title: __('Synced'),
+				message: __(`Table '{0}' refreshed from Google Sheet.`, table.table_name),
+				variant: 'success',
+			})
+			return refreshUploads()
+		})
+		.catch((error: Error) => {
+			createToast({
+				title: __('Sync failed'),
+				message: error?.message || __('Could not refresh this Google Sheet.'),
+				variant: 'error',
+			})
+		})
+		.finally(() => {
+			syncingTable.value = null
+		})
+}
+
 function confirmDeleteTable(table: DataSourceTable) {
 	confirmDialog({
 		title: __('Delete uploaded file'),
@@ -186,6 +220,8 @@ provide('uploadsTreeCtx', {
 	confirmDeleteTable,
 	canDeleteUploads,
 	deletingTable,
+	syncGoogleSheetTable,
+	syncingTable,
 })
 
 const dataSourceStore = useDataSourceStore()
@@ -202,16 +238,18 @@ watchEffect(() => {
 				{ label: dataSource?.title || props.name, route: `/data-source/${props.name}` },
 			]"
 		/>
-		<Button
-			v-if="isUploadsDataSource"
-			variant="solid"
-			:label="__('Upload File')"
-			@click="showUploadDialog = true"
-		>
-			<template #prefix>
-				<Upload class="h-4 w-4" stroke-width="1.5" />
-			</template>
-		</Button>
+		<div v-if="isUploadsDataSource" class="flex items-center gap-2">
+			<Button variant="outline" :label="__('Link Google Sheet')" @click="openUploadDialog('sheet')">
+				<template #prefix>
+					<Sheet class="h-4 w-4" stroke-width="1.5" />
+				</template>
+			</Button>
+			<Button variant="solid" :label="__('Upload File')" @click="openUploadDialog('file')">
+				<template #prefix>
+					<Upload class="h-4 w-4" stroke-width="1.5" />
+				</template>
+			</Button>
+		</div>
 	</header>
 
 	<div class="mb-4 flex min-h-0 flex-1 flex-col gap-3 overflow-auto px-5 py-3">
@@ -253,12 +291,10 @@ watchEffect(() => {
 				class="flex flex-col items-center justify-center rounded border border-dashed py-16 text-center"
 			>
 				<p class="text-sm font-medium text-gray-800">{{ __('No Tables Found') }}</p>
-				<Button
-					class="mt-3"
-					variant="solid"
-					:label="__('Upload File')"
-					@click="showUploadDialog = true"
-				/>
+				<div class="mt-3 flex gap-2">
+					<Button variant="outline" :label="__('Link Google Sheet')" @click="openUploadDialog('sheet')" />
+					<Button variant="solid" :label="__('Upload File')" @click="openUploadDialog('file')" />
+				</div>
 			</div>
 			<div v-else class="flex flex-col gap-1.5 pb-4">
 				<FolderTreeBranch
@@ -284,7 +320,25 @@ watchEffect(() => {
 							>
 								<FileText class="h-4 w-4 text-gray-400" />
 								<span class="truncate font-mono text-sm">{{ table.table_name }}</span>
+								<span
+									v-if="table.google_sheet_sync"
+									class="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700"
+								>
+									<Sheet class="h-3 w-3" />
+									{{ __('Sheet') }}
+								</span>
 							</div>
+							<Button
+								v-if="table.google_sheet_sync"
+								variant="ghost"
+								:label="__('Sync Now')"
+								:loading="syncingTable === table.table_name"
+								@click.stop="syncGoogleSheetTable(table)"
+							>
+								<template #prefix>
+									<RefreshCcw class="h-4 w-4 text-gray-500 group-hover:text-blue-600" />
+								</template>
+							</Button>
 							<Button
 								v-if="canDeleteUploads"
 								variant="ghost"
@@ -317,5 +371,5 @@ watchEffect(() => {
 		/>
 	</div>
 
-	<UploadCSVFileDialog v-model="showUploadDialog" />
+	<UploadCSVFileDialog v-model="showUploadDialog" :initial-mode="uploadDialogMode" />
 </template>

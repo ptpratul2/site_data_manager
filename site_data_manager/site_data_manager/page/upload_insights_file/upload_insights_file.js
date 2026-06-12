@@ -5,16 +5,20 @@ frappe.pages["upload-insights-file"].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
-	new UploadInsightsFilePage(page);
+	const mode = frappe.get_route()[1] === "sheet" ? "sheet" : "file";
+	new UploadInsightsFilePage(page, mode);
 };
 
 class UploadInsightsFilePage {
-	constructor(page) {
+	constructor(page, initialMode = "file") {
 		this.page = page;
 		this.wrapper = $(page.body);
+		this.mode = initialMode;
 		this.file_doc = null;
 		this.preview = null;
 		this.site_folder_field = null;
+		this.sheet_url = "";
+		this.sync_interval = "30";
 		this.render();
 		this.load_site_folders();
 	}
@@ -29,11 +33,43 @@ class UploadInsightsFilePage {
 						"Loading folders…"
 					)}</p>
 				</div>
-				<div class="form-group">
-					<label class="control-label">${__("File")} <span class="text-danger">*</span></label>
-					<div class="file-field"></div>
-					<p class="help-block small text-muted">${__("CSV, Excel (.xlsx), JSON, or JSONL")}</p>
+
+				<ul class="nav nav-tabs" style="margin-bottom: 1rem;">
+					<li class="${this.mode === "file" ? "active" : ""}">
+						<a href="#" class="tab-file">${__("Upload File")}</a>
+					</li>
+					<li class="${this.mode === "sheet" ? "active" : ""}">
+						<a href="#" class="tab-sheet">${__("Link Google Sheet")}</a>
+					</li>
+				</ul>
+
+				<div class="mode-file" style="${this.mode === "file" ? "" : "display:none;"}">
+					<div class="form-group">
+						<label class="control-label">${__("File")} <span class="text-danger">*</span></label>
+						<div class="file-field"></div>
+						<p class="help-block small text-muted">${__("CSV, Excel (.xlsx), JSON, or JSONL")}</p>
+					</div>
 				</div>
+
+				<div class="mode-sheet" style="${this.mode === "sheet" ? "" : "display:none;"}">
+					<div class="form-group">
+						<label class="control-label">${__("Google Sheet URL")} <span class="text-danger">*</span></label>
+						<input type="url" class="form-control sheet-url-input" placeholder="https://docs.google.com/spreadsheets/d/..." />
+						<p class="help-block small text-muted">${__(
+							'Share the sheet as "Anyone with the link can view", then paste the browser URL here.'
+						)}</p>
+					</div>
+					<div class="form-group">
+						<label class="control-label">${__("Auto Sync Interval")}</label>
+						<select class="form-control sync-interval-input">
+							<option value="15">${__("Every 15 minutes")}</option>
+							<option value="30" selected>${__("Every 30 minutes")}</option>
+							<option value="60">${__("Every 60 minutes")}</option>
+							<option value="120">${__("Every 2 hours")}</option>
+						</select>
+					</div>
+				</div>
+
 				<div class="form-group table-name-group" style="display: none;">
 					<label class="control-label">${__("Table Name")}</label>
 					<input type="text" class="form-control table-name-input" />
@@ -41,7 +77,9 @@ class UploadInsightsFilePage {
 				<div class="preview-area" style="display: none; margin-top: 1rem;"></div>
 				<div class="form-group" style="margin-top: 1rem;">
 					<button class="btn btn-default btn-preview" disabled>${__("Preview")}</button>
-					<button class="btn btn-primary btn-import" disabled style="margin-left: 8px;">${__("Import to Insights")}</button>
+					<button class="btn btn-primary btn-import" disabled style="margin-left: 8px;">${__(
+						"Import to Insights"
+					)}</button>
 				</div>
 			</div>
 		`);
@@ -62,8 +100,48 @@ class UploadInsightsFilePage {
 			},
 		});
 
-		this.wrapper.find(".btn-preview").on("click", () => this.preview_file());
-		this.wrapper.find(".btn-import").on("click", () => this.import_file());
+		this.wrapper.find(".tab-file").on("click", (e) => {
+			e.preventDefault();
+			this.set_mode("file");
+		});
+		this.wrapper.find(".tab-sheet").on("click", (e) => {
+			e.preventDefault();
+			this.set_mode("sheet");
+		});
+		this.wrapper.find(".btn-preview").on("click", () => this.preview_data());
+		this.wrapper.find(".btn-import").on("click", () => this.import_data());
+		this.wrapper.find(".sheet-url-input").on("input", (e) => {
+			this.sheet_url = $(e.currentTarget).val();
+			this.wrapper.find(".btn-preview").prop("disabled", !this.sheet_url.trim());
+		});
+		this.wrapper.find(".sync-interval-input").on("change", (e) => {
+			this.sync_interval = $(e.currentTarget).val();
+		});
+
+		if (this.mode === "sheet") {
+			this.wrapper.find(".btn-preview").prop("disabled", true);
+		}
+	}
+
+	set_mode(mode) {
+		this.mode = mode;
+		this.preview = null;
+		this.wrapper.find(".nav-tabs li").removeClass("active");
+		this.wrapper.find(`.tab-${mode}`).parent().addClass("active");
+		this.wrapper.find(".mode-file").toggle(mode === "file");
+		this.wrapper.find(".mode-sheet").toggle(mode === "sheet");
+		this.wrapper.find(".table-name-group").hide();
+		this.wrapper.find(".preview-area").hide().empty();
+		this.wrapper.find(".btn-import").prop("disabled", true);
+		this.wrapper
+			.find(".btn-preview")
+			.prop(
+				"disabled",
+				mode === "file" ? !this.file_doc?.name : !this.sheet_url.trim()
+			);
+		this.wrapper.find(".btn-import").text(
+			mode === "sheet" ? __("Link & Sync") : __("Import to Insights")
+		);
 	}
 
 	load_site_folders() {
@@ -110,7 +188,6 @@ class UploadInsightsFilePage {
 					)
 				);
 
-				// Show folder_name labels in the select where possible
 				const $select = this.site_folder_field.$input;
 				if ($select && $select.is("select")) {
 					$select.find("option").each(function () {
@@ -141,75 +218,120 @@ class UploadInsightsFilePage {
 		return this.wrapper.find(".table-name-input").val()?.trim();
 	}
 
-	preview_file() {
-		if (!this.file_doc?.name) {
-			frappe.msgprint(__("Please upload a file first."));
-			return;
-		}
+	preview_data() {
 		if (!this.get_site_folder()) {
 			frappe.msgprint(__("Please select a Site Folder."));
 			return;
 		}
 
-		frappe.call({
-			method: "insights.api.get_file_data",
-			args: { filename: this.file_doc.name },
-			freeze: true,
-			callback: (r) => {
-				this.preview = r.message;
-				const table_name = this.preview.tablename || this.get_table_name();
-				this.wrapper.find(".table-name-group").show();
-				this.wrapper.find(".table-name-input").val(table_name);
-				this.wrapper.find(".btn-import").prop("disabled", false);
+		if (this.mode === "file") {
+			if (!this.file_doc?.name) {
+				frappe.msgprint(__("Please upload a file first."));
+				return;
+			}
+			frappe.call({
+				method: "insights.api.get_file_data",
+				args: { filename: this.file_doc.name },
+				freeze: true,
+				callback: (r) => this.show_preview(r.message),
+			});
+			return;
+		}
 
-				const rows = (this.preview.rows || []).slice(0, 50);
-				const cols = this.preview.columns || [];
-				let html = `<p class="text-muted">${__("Showing {0} of {1} rows", [
-					rows.length,
-					this.preview.total_rows || 0,
-				])}</p><div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr>`;
-				cols.forEach((c) => {
-					const label = c.label || c.column || c.name || "";
-					html += `<th>${frappe.utils.escape_html(label)}</th>`;
-				});
-				html += "</tr></thead><tbody>";
-				rows.forEach((row) => {
-					html += "<tr>";
-					cols.forEach((c) => {
-						const key = c.column || c.name;
-						const val = row[key] ?? "";
-						html += `<td>${frappe.utils.escape_html(String(val))}</td>`;
-					});
-					html += "</tr>";
-				});
-				html += "</tbody></table></div>";
-				this.wrapper.find(".preview-area").html(html).show();
-			},
+		const url = this.sheet_url.trim();
+		if (!url) {
+			frappe.msgprint(__("Please paste a Google Sheet URL."));
+			return;
+		}
+
+		frappe.call({
+			method: "site_data_manager.api.google_sheets.preview_google_sheet",
+			args: { url },
+			freeze: true,
+			callback: (r) => this.show_preview(r.message),
 		});
 	}
 
-	import_file() {
-		if (!this.file_doc?.name) {
-			frappe.msgprint(__("Please upload a file first."));
-			return;
-		}
+	show_preview(data) {
+		this.preview = data;
+		const table_name = this.preview.tablename || this.get_table_name();
+		this.wrapper.find(".table-name-group").show();
+		this.wrapper.find(".table-name-input").val(table_name);
+		this.wrapper.find(".btn-import").prop("disabled", false);
+
+		const rows = (this.preview.rows || []).slice(0, 50);
+		const cols = this.preview.columns || [];
+		let html = `<p class="text-muted">${__("Showing {0} of {1} rows", [
+			rows.length,
+			this.preview.total_rows || 0,
+		])}</p><div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr>`;
+		cols.forEach((c) => {
+			const label = c.label || c.column || c.name || "";
+			html += `<th>${frappe.utils.escape_html(label)}</th>`;
+		});
+		html += "</tr></thead><tbody>";
+		rows.forEach((row) => {
+			html += "<tr>";
+			cols.forEach((c) => {
+				const key = c.column || c.name;
+				const val = row[key] ?? "";
+				html += `<td>${frappe.utils.escape_html(String(val))}</td>`;
+			});
+			html += "</tr>";
+		});
+		html += "</tbody></table></div>";
+		this.wrapper.find(".preview-area").html(html).show();
+	}
+
+	import_data() {
 		const site_folder = this.get_site_folder();
 		if (!site_folder) {
 			frappe.msgprint(__("Please select a Site Folder."));
 			return;
 		}
 
+		if (this.mode === "file") {
+			if (!this.file_doc?.name) {
+				frappe.msgprint(__("Please upload a file first."));
+				return;
+			}
+			frappe.call({
+				method: "insights.api.import_csv_data",
+				args: {
+					filename: this.file_doc.name,
+					tablename: this.get_table_name() || "",
+					site_folder: site_folder,
+				},
+				freeze: true,
+				callback: () => {
+					frappe.show_alert({
+						message: __("Table imported successfully"),
+						indicator: "green",
+					});
+					frappe.set_route("manage-insights-uploads");
+				},
+			});
+			return;
+		}
+
+		const url = this.sheet_url.trim();
+		if (!url) {
+			frappe.msgprint(__("Please paste a Google Sheet URL."));
+			return;
+		}
+
 		frappe.call({
-			method: "insights.api.import_csv_data",
+			method: "site_data_manager.api.google_sheets.link_google_sheet",
 			args: {
-				filename: this.file_doc.name,
+				url,
 				tablename: this.get_table_name() || "",
 				site_folder: site_folder,
+				sync_interval_minutes: Number(this.sync_interval) || 30,
 			},
 			freeze: true,
 			callback: () => {
 				frappe.show_alert({
-					message: __("Table imported successfully"),
+					message: __("Google Sheet linked and synced"),
 					indicator: "green",
 				});
 				frappe.set_route("manage-insights-uploads");

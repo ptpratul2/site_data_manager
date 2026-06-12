@@ -6,6 +6,9 @@ frappe.pages["manage-insights-uploads"].on_page_load = function (wrapper) {
 	});
 
 	page.set_primary_action(__("Upload File"), () => frappe.set_route("upload-insights-file"));
+	page.add_inner_button(__("Link Google Sheet"), () =>
+		frappe.set_route("upload-insights-file", { mode: "sheet" })
+	);
 	page.set_secondary_action(__("Refresh"), () => page.manage_uploads?.refresh());
 
 	new ManageInsightsUploadsPage(page);
@@ -177,6 +180,27 @@ class ManageInsightsUploadsPage {
 			const table_name = $(e.currentTarget).data("table");
 			this.confirm_delete(table_name);
 		});
+
+		this.tree_area.find(".btn-sync-table").on("click", (e) => {
+			e.stopPropagation();
+			const table_name = $(e.currentTarget).data("table");
+			this.sync_google_sheet(table_name);
+		});
+	}
+
+	sync_google_sheet(table_name) {
+		frappe.call({
+			method: "site_data_manager.api.google_sheets.sync_google_sheet_now",
+			args: { table_name },
+			freeze: true,
+			callback: () => {
+				frappe.show_alert({
+					message: __("Google Sheet synced"),
+					indicator: "green",
+				});
+				this.refresh();
+			},
+		});
 	}
 
 	render_folder_node(node, by_folder, depth) {
@@ -216,6 +240,17 @@ class ManageInsightsUploadsPage {
 	}
 
 	render_row(table) {
+		const is_sheet = Boolean(table.google_sheet_sync);
+		const sheet_badge = is_sheet
+			? `<span class="badge" style="margin-left: 6px; background: #e8f5e9; color: #2e7d32;">${__(
+					"Sheet"
+			  )}</span>`
+			: "";
+		const sync_btn = is_sheet
+			? `<button class="btn btn-xs btn-default btn-sync-table" data-table="${frappe.utils.escape_html(
+					table.table_name
+			  )}" title="${__("Sync Now")}">↻</button>`
+			: "";
 		const delete_btn = this.can_delete
 			? `<button class="btn btn-xs btn-default btn-delete-table" data-table="${frappe.utils.escape_html(
 					table.table_name
@@ -226,9 +261,9 @@ class ManageInsightsUploadsPage {
 				<td class="col-table" style="width: 70%;">
 					<a href="/insights/data-source/uploads/${encodeURIComponent(table.table_name)}" target="_blank">
 						<code>${frappe.utils.escape_html(table.table_name)}</code>
-					</a>
+					</a>${sheet_badge}
 				</td>
-				<td class="text-right">${delete_btn}</td>
+				<td class="text-right">${sync_btn} ${delete_btn}</td>
 			</tr>
 		`;
 	}

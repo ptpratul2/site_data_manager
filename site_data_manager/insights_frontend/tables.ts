@@ -5,12 +5,23 @@ import { showErrorToast, toOptions } from '../helpers'
 import { createToast } from '../helpers/toasts'
 import { QueryResultColumn, QueryResultRow } from '../types/query.types'
 
+export type GoogleSheetSyncInfo = {
+	name: string
+	table_name: string
+	enabled: number
+	sync_interval_minutes: string
+	last_synced_on?: string
+	last_sync_status?: string
+	last_sync_error?: string
+}
+
 export type DataSourceTable = {
 	name: string
 	table_name: string
 	data_source: string
 	custom_site_folder?: string
 	custom_site_folder_doc?: string
+	google_sheet_sync?: GoogleSheetSyncInfo
 	preview?: any[]
 }
 const tables = ref<Record<string, DataSourceTable[]>>({})

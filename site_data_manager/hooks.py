@@ -10,6 +10,12 @@ required_apps = ["insights"]
 after_install = ["site_data_manager.install.after_install"]
 after_migrate = ["site_data_manager.install.after_migrate"]
 
+scheduler_events = {
+	"cron": {
+		"*/15 * * * *": ["site_data_manager.tasks.sync_all_google_sheets"],
+	},
+}
+
 fixtures = [
 	{
 		"dt": "Custom Field",
